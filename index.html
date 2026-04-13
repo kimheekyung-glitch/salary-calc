@@ -187,7 +187,7 @@
                 <button class="btn-delete" onclick="deleteData(${item.id})">삭제</button>
                 <div class="history-date">📅 ${item.date}</div>
                 <div class="history-details">시간: ${item.inTime}~${item.outTime} (${item.actualHours}h) / 초과: ${item.overtimeHours}h</div>
-                <div class="history-pay">일급: ${item.totalPay.toLocaleString()}원</div>
+                <div class="history-pay">초과 수당: ${item.totalPay.toLocaleString()}원</div>
             `;
             historyList.appendChild(div);
         });
