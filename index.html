@@ -127,6 +127,18 @@
             font-size: 0.9em;
             padding: 10px 0;
         }
+        /* 추가된 누적 합계 스타일 */
+        .summary-box {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            text-align: center;
+            font-size: 1.1em;
+            font-weight: bold;
+            border: 2px dashed #ffeeba;
+        }
     </style>
 </head>
 <body>
@@ -155,6 +167,7 @@
         <div class="result-box">
             <div class="result-item"><span>실제 근무 시간 (휴게 1h 제외):</span> <span id="resActualHours">0시간</span></div>
             <div class="result-item"><span>초과 근무 시간:</span> <span id="resOvertimeHours">0시간</span></div>
+            <div class="result-item"><span style="color: #e67e22;">초과 근무 수당:</span> <span id="resOvertimePay" style="color: #e67e22;">0원</span></div>
             <div class="total result-item"><span style="color: #27ae60;">총 예상 일급:</span> <span id="resTotalPay" style="color: #27ae60;">0원</span></div>
         </div>
 
@@ -165,13 +178,12 @@
         <h2>📂 저장된 근무 내역</h2>
         <div id="historyList">
             </div>
+        <div id="summaryContainer"></div>
     </div>
 </div>
 
 <script>
-    // 오늘 날짜를 기본값으로 세팅
     document.getElementById('workDate').valueAsDate = new Date();
-
     let currentResult = {};
 
     function calculate() {
@@ -200,9 +212,10 @@
 
         document.getElementById('resActualHours').innerText = actualHours.toFixed(1) + "시간";
         document.getElementById('resOvertimeHours').innerText = overtimeHours.toFixed(1) + "시간";
+        document.getElementById('resOvertimePay').innerText = Math.floor(overtimePay).toLocaleString() + "원";
         document.getElementById('resTotalPay').innerText = totalPay.toLocaleString() + "원";
 
-        // 저장하기 위해 현재 계산 상태 보관
+        // 저장하기 위해 초과 수당 데이터까지 포함하여 보관
         currentResult = {
             id: Date.now(),
             date: date,
@@ -210,6 +223,7 @@
             outTime: outTime,
             actualHours: actualHours.toFixed(1),
             overtimeHours: overtimeHours.toFixed(1),
+            overtimePay: Math.floor(overtimePay),
             totalPay: totalPay
         };
     }
@@ -220,18 +234,13 @@
             return;
         }
 
-        // 기존 데이터 불러오기
         let savedData = JSON.parse(localStorage.getItem('workHistory')) || [];
-        
-        // 새 데이터 추가 및 날짜순 정렬
         savedData.push(currentResult);
-        savedData.sort((a, b) => new Date(b.date) - new Date(a.date)); // 최신 날짜가 위로
+        savedData.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-        // 다시 로컬스토리지에 저장
         localStorage.setItem('workHistory', JSON.stringify(savedData));
         
         renderHistory();
-        alert("성공적으로 저장되었습니다!");
     }
 
     function deleteData(id) {
@@ -247,15 +256,23 @@
     function renderHistory() {
         let savedData = JSON.parse(localStorage.getItem('workHistory')) || [];
         const historyList = document.getElementById('historyList');
+        const summaryContainer = document.getElementById('summaryContainer');
         
         historyList.innerHTML = '';
+        summaryContainer.innerHTML = '';
 
         if (savedData.length === 0) {
             historyList.innerHTML = '<div class="empty-msg">저장된 내역이 없습니다.</div>';
             return;
         }
 
+        let totalOvertimeSum = 0;
+
         savedData.forEach(item => {
+            // 과거 기록에 overtimePay가 없는 경우를 위한 예외 처리
+            let itemOvertimePay = item.overtimePay || 0;
+            totalOvertimeSum += itemOvertimePay;
+
             const div = document.createElement('div');
             div.className = 'history-item';
             div.innerHTML = `
@@ -263,15 +280,23 @@
                 <div class="history-date">📅 ${item.date}</div>
                 <div class="history-details">
                     근무 시간: ${item.inTime} ~ ${item.outTime} (총 ${item.actualHours}시간) <br>
-                    초과 근무: ${item.overtimeHours}시간
+                    초과 근무: ${item.overtimeHours}시간 <span style="color: #e67e22;">(+${itemOvertimePay.toLocaleString()}원)</span>
                 </div>
                 <div class="history-pay">일급: ${item.totalPay.toLocaleString()}원</div>
             `;
             historyList.appendChild(div);
         });
+
+        // 총 초과 수당 합계 표시
+        if (totalOvertimeSum > 0) {
+            summaryContainer.innerHTML = `
+                <div class="summary-box">
+                    💰 누적 초과 수당 합계: ${totalOvertimeSum.toLocaleString()}원
+                </div>
+            `;
+        }
     }
 
-    // 처음 로딩 시 초기화
     calculate();
     renderHistory();
 </script>
